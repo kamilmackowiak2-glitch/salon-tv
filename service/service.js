@@ -19,7 +19,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.1.0';
+  var VERSION = '1.2.0';
   var PORT = 8097;
   var REMOTE_NAME = 'Salon';
 
@@ -83,7 +83,22 @@
   var appsAt = 0;
   var iconPaths = {};
   var pkgOf = {};
+  var appName = {};
+  var genericPaths = {};
+  var genericHash = {};
   var visible = {};
+  var GENERIC_RE = /default|no_?icon|placeholder/i;
+
+  // Aplikacje systemowe mają techniczne nazwy: same małe litery bez spacji (factory, ep-hotel-channel)
+  // albo kończą się na „service”.
+  function looksSystem(name) {
+    if (name === name.toLowerCase() && !/\s/.test(name)) { return true; }
+    return /\bservice$/i.test(name) || /widget/i.test(name);
+  }
+
+  function normName(s) {
+    return String(s || '').toLowerCase().replace(/[^a-z0-9+]/g, '');
+  }
 
   function listApps(cb) {
     if (appsCache && Date.now() - appsAt < 60000) { cb(null, appsCache); return; }
@@ -105,16 +120,22 @@
         var seen = {};
         var icons = {};
         var pkgs = {};
+        var names = {};
+        var usage = {};
         var vis = {};
         for (var i = 0; i < infos.length; i++) {
           var a = infos[i];
           if (!a || !a.id || a.show === false) { continue; }
           var name = String(a.name || '').replace(/\s+/g, ' ').trim();
-          if (!name || seen[a.id]) { continue; }
+          if (!name || seen[a.id] || looksSystem(name)) { continue; }
           seen[a.id] = true;
           vis[a.id] = true;
-          if (a.iconPath) { icons[a.id] = String(a.iconPath).replace(/^file:\/\//, ''); }
+          if (a.iconPath) {
+            icons[a.id] = String(a.iconPath).replace(/^file:\/\//, '');
+            usage[icons[a.id]] = (usage[icons[a.id]] || 0) + 1;
+          }
           pkgs[a.id] = String(a.packageId || String(a.id).split('.')[0]);
+          names[a.id] = name;
           out.push({ id: a.id, name: name, icon: true });
         }
         out.sort(function (x, y) {
@@ -122,10 +143,18 @@
           var q = y.name.toLowerCase();
           return p < q ? -1 : (p > q ? 1 : 0);
         });
+        // Ikona wspólna dla kilku aplikacji albo z „default” w nazwie to zastępczy wiatraczek Tizena.
+        for (var k in icons) {
+          if (Object.prototype.hasOwnProperty.call(icons, k) && (usage[icons[k]] > 1 || GENERIC_RE.test(icons[k]))) {
+            genericPaths[icons[k]] = true;
+            delete icons[k];
+          }
+        }
         appsCache = out;
         appsAt = Date.now();
         iconPaths = icons;
         pkgOf = pkgs;
+        appName = names;
         visible = vis;
         fin(null, out);
       }, function (e) {
@@ -344,34 +373,63 @@
     }
   };
 
+  function lanAddress() {
+    try {
+      var ifs = REQ('os').networkInterfaces();
+      var names = Object.keys(ifs);
+      for (var i = 0; i < names.length; i++) {
+        var list = ifs[names[i]] || [];
+        for (var j = 0; j < list.length; j++) {
+          var a = list[j];
+          if (a && a.family === 'IPv4' && !a.internal && a.address) { return a.address; }
+        }
+      }
+    } catch (e) { /* brak */ }
+    return null;
+  }
+
   Remote.prototype._connect = function () {
     var me = this;
-    var ports = [8002, 8001];
+    var targets = [];
+    var lan = lanAddress();
+    if (lan) {
+      targets.push({ host: lan, port: 8002 });
+      targets.push({ host: lan, port: 8001 });
+    }
+    targets.push({ host: '127.0.0.1', port: 8002 });
+    targets.push({ host: '127.0.0.1', port: 8001 });
     var i = 0;
     me.state = 'connecting';
     me.lastError = null;
+    me.log = [];
     function next(err) {
-      if (err) { me.lastError = err; }
-      if (i >= ports.length) {
+      if (err) {
+        me.lastError = err;
+        me.log.push(targets[i - 1].host + ':' + targets[i - 1].port + ' ' + emsg(err));
+      }
+      if (i >= targets.length) {
         me.state = 'failed';
+        log('pilot sieciowy:', me.log.join(' | '));
         me._flush(me.lastError || new Error('Brak połączenia z pilotem sieciowym telewizora'));
         return;
       }
-      var port = ports[i];
+      var t = targets[i];
       i++;
-      me._attempt(port, function (e, sock) {
+      me._attempt(t.host, t.port, function (e, sock) {
         if (e) { next(e); return; }
         me.sock = sock;
-        me.port = port;
+        me.port = t.port;
+        me.host = t.host;
         me.state = 'ready';
-        log('pilot sieciowy połączony, port', port);
+        me.log.push(t.host + ':' + t.port + ' OK');
+        log('pilot sieciowy połączony', t.host + ':' + t.port);
         me._flush(null);
       });
     }
     next(null);
   };
 
-  Remote.prototype._attempt = function (port, done) {
+  Remote.prototype._attempt = function (host, port, done) {
     var me = this;
     var secure = (port === 8002);
     var finished = false;
@@ -399,12 +457,13 @@
     var name = new Buffer(REMOTE_NAME, 'utf8').toString('base64');
     var path = '/api/v2/channels/samsung.remote.control?name=' + encodeURIComponent(name);
     if (secure && me.token) { path += '&token=' + encodeURIComponent(me.token); }
+    var waitMs = 25000;
     var wsKey = crypto.randomBytes(16).toString('base64');
 
     function onConnect() {
       sock.write(
         'GET ' + path + ' HTTP/1.1\r\n' +
-        'Host: 127.0.0.1:' + port + '\r\n' +
+        'Host: ' + host + ':' + port + '\r\n' +
         'Upgrade: websocket\r\n' +
         'Connection: Upgrade\r\n' +
         'Sec-WebSocket-Key: ' + wsKey + '\r\n' +
@@ -478,16 +537,16 @@
 
     try {
       if (secure) {
-        sock = tls.connect({ host: '127.0.0.1', port: port, rejectUnauthorized: false }, onConnect);
+        sock = tls.connect({ host: host, port: port, rejectUnauthorized: false }, onConnect);
       } else {
-        sock = net.connect({ host: '127.0.0.1', port: port }, onConnect);
+        sock = net.connect({ host: host, port: port }, onConnect);
       }
     } catch (e) {
       finish(e);
       return;
     }
 
-    sock.setTimeout(45000);
+    sock.setTimeout(waitMs + 5000);
     sock.on('timeout', function () {
       if (!finished) { finish(new Error('Telewizor nie odpowiada (port ' + port + ')')); }
     });
@@ -515,7 +574,7 @@
         buf = buf.slice(end + 4);
         authTimer = setTimeout(function () {
           finish(new Error('Nie zatwierdzono dostępu na telewizorze'));
-        }, 40000);
+        }, waitMs);
       }
       parse();
     });
@@ -545,38 +604,42 @@
     res.end(JSON.stringify(obj));
   }
 
-  // Ikona z informacji o aplikacji, a gdy jej brak albo nie da się jej odczytać,
-  // najlepszy obrazek z folderu zasobów aplikacji (nazwa z "icon" lub "logo" wygrywa).
+  // Kolejność szukania ikony:
+  //   1. ikona z paska Smart Hub (/opt/share/webappservice/apps_icon/FirstScreen/<id>), dopasowana po nazwie,
+  //   2. ikona z informacji o aplikacji, jeśli nie jest zastępczym wiatraczkiem,
+  //   3. najlepszy obrazek z folderu zasobów aplikacji.
+  var FS_DIR = '/opt/share/webappservice/apps_icon/FirstScreen';
+  var KNOWN_STORE = {
+    '111299001912': 'YouTube', '3201907018807': 'Netflix', '11101200001': 'Netflix',
+    '3201910019365': 'Prime Video', '3201512006785': 'Prime Video', '3201901017640': 'Disney+',
+    '3201606009684': 'Spotify', '3201807016597': 'Apple TV', '3202301029760': 'Max',
+    '3201601007230': 'HBO GO', '3201710015067': 'Crunchyroll'
+  };
+  var fsIcons = null;
+  var fsWaiting = [];
   var iconFound = {};
 
-  function findIconFile(id, cb) {
-    var pkg = pkgOf[id] || String(id).split('.')[0];
-    if (!pkg || !/^[A-Za-z0-9_\-]+$/.test(pkg)) { cb(null); return; }
-    var dirs = [
-      '/opt/usr/globalapps/' + pkg + '/shared/res',
-      '/opt/usr/apps/' + pkg + '/shared/res',
-      '/opt/usr/globalapps/' + pkg + '/res/wgt',
-      '/opt/usr/apps/' + pkg + '/res/wgt',
-      '/usr/apps/' + pkg + '/shared/res'
-    ];
+  function bestImageIn(dirs, cb) {
     var best = null;
     var i = 0;
     function nextDir() {
       if (i >= dirs.length) { cb(best ? best.path : null); return; }
       var dir = dirs[i];
       i++;
-      fs.readdir(dir, function (err, names) {
-        if (err || !names) { nextDir(); return; }
-        var files = names.filter(function (n) { return /\.(png|jpe?g|webp)$/i.test(n); });
+      fs.readdir(dir, function (err, list) {
+        if (err || !list) { nextDir(); return; }
+        var files = list.filter(function (n) { return /\.(png|jpe?g|webp)$/i.test(n); });
         var j = 0;
         function nextFile() {
           if (j >= files.length) { nextDir(); return; }
           var n = files[j];
           j++;
           var p = dir + '/' + n;
+          if (genericPaths[p] || GENERIC_RE.test(n)) { nextFile(); return; }
           fs.stat(p, function (e, st) {
             if (!e && st && st.isFile() && st.size > 1500 && st.size < 4000000) {
               var score = st.size;
+              if (/^250x250\./.test(n)) { score += 9000000; }
               if (/icon|logo/i.test(n)) { score += 5000000; }
               if (/splash|background|banner|bg[_\-.]/i.test(n)) { score -= 8000000; }
               if (!best || score > best.score) { best = { path: p, score: score }; }
@@ -590,6 +653,67 @@
     nextDir();
   }
 
+  function restName(id, cb) {
+    var finished = false;
+    function fin(n) {
+      if (finished) { return; }
+      finished = true;
+      cb(n);
+    }
+    try {
+      var r = http.get({ host: '127.0.0.1', port: 8001, path: '/api/v2/applications/' + encodeURIComponent(id) }, function (res) {
+        var body = '';
+        res.setEncoding('utf8');
+        res.on('data', function (d) { body += d; });
+        res.on('end', function () {
+          try { fin(JSON.parse(body).name || null); } catch (e) { fin(null); }
+        });
+      });
+      r.on('error', function () { fin(null); });
+      r.setTimeout(1500, function () {
+        try { r.abort(); } catch (e) { /* brak */ }
+        fin(null);
+      });
+    } catch (e) {
+      fin(null);
+    }
+  }
+
+  function firstScreen(cb) {
+    if (fsIcons) { cb(fsIcons); return; }
+    fsWaiting.push(cb);
+    if (fsWaiting.length > 1) { return; }
+    var map = {};
+    fs.readdir(FS_DIR, function (err, list) {
+      var ids = [];
+      (list || []).forEach(function (n) { if (/^[A-Za-z0-9._\-]+$/.test(n)) { ids.push(n); } });
+      Object.keys(KNOWN_STORE).forEach(function (k) { if (ids.indexOf(k) < 0) { ids.push(k); } });
+      var i = 0;
+      function next() {
+        if (i >= ids.length) {
+          fsIcons = map;
+          var w = fsWaiting;
+          fsWaiting = [];
+          w.forEach(function (f) { f(map); });
+          return;
+        }
+        var id = ids[i];
+        i++;
+        bestImageIn([FS_DIR + '/' + id], function (p) {
+          if (!p) { next(); return; }
+          restName(id, function (n) {
+            var key = normName(n || KNOWN_STORE[id]);
+            if (key && !map[key]) { map[key] = p; }
+            next();
+          });
+        });
+      }
+      next();
+    });
+  }
+
+  function md5(data) { return crypto.createHash('md5').update(data).digest('hex'); }
+
   function serveIcon(req, res, id) {
     function notFound() {
       res.writeHead(404, { 'Access-Control-Allow-Origin': '*' });
@@ -599,42 +723,59 @@
       var ext = String(p.split('.').pop() || '').toLowerCase();
       var type = 'image/png';
       if (ext === 'jpg' || ext === 'jpeg') { type = 'image/jpeg'; }
-      else if (ext === 'svg') { type = 'image/svg+xml'; }
       else if (ext === 'webp') { type = 'image/webp'; }
       else if (ext === 'gif') { type = 'image/gif'; }
-      res.writeHead(200, {
-        'Content-Type': type,
-        'Cache-Control': 'max-age=86400',
-        'Access-Control-Allow-Origin': '*'
-      });
+      res.writeHead(200, { 'Content-Type': type, 'Cache-Control': 'max-age=3600', 'Access-Control-Allow-Origin': '*' });
       res.end(data);
     }
-    function fallback() {
-      if (iconFound[id] === null) { notFound(); return; }
-      if (iconFound[id]) {
-        fs.readFile(iconFound[id], function (err, data) {
-          if (err) { notFound(); } else { send(iconFound[id], data); }
-        });
-        return;
-      }
-      findIconFile(id, function (p) {
-        iconFound[id] = p || null;
-        if (!p) { notFound(); return; }
-        fs.readFile(p, function (err, data) {
-          if (err) { notFound(); } else { send(p, data); }
+    // Czyta plik i odrzuca zastępczy wiatraczek (ten sam obrazek u wielu aplikacji).
+    function tryFile(p, ok, fail) {
+      if (!p || genericPaths[p]) { fail(); return; }
+      fs.readFile(p, function (err, data) {
+        if (err) { fail(); return; }
+        var h = md5(data);
+        if (genericHash[h]) { fail(); return; }
+        ok(p, data);
+      });
+    }
+    function done(p, data) {
+      iconFound[id] = p;
+      send(p, data);
+    }
+    function stepPkg() {
+      var pkg = pkgOf[id] || String(id).split('.')[0];
+      if (!pkg || !/^[A-Za-z0-9_\-]+$/.test(pkg)) { iconFound[id] = null; notFound(); return; }
+      bestImageIn([
+        '/opt/usr/globalapps/' + pkg + '/shared/res',
+        '/opt/usr/apps/' + pkg + '/shared/res',
+        '/opt/usr/globalapps/' + pkg + '/res/wgt',
+        '/opt/usr/apps/' + pkg + '/res/wgt',
+        '/usr/apps/' + pkg + '/shared/res'
+      ], function (p) {
+        tryFile(p, done, function () {
+          iconFound[id] = null;
+          notFound();
         });
       });
     }
+    function stepOwn() { tryFile(iconPaths[id], done, stepPkg); }
     function go() {
       if (!visible[id]) { notFound(); return; }
-      var p = iconPaths[id];
-      if (!p) { fallback(); return; }
-      fs.readFile(p, function (err, data) {
-        if (err) { fallback(); } else { send(p, data); }
+      if (iconFound[id] === null) { notFound(); return; }
+      if (iconFound[id]) { tryFile(iconFound[id], send, notFound); return; }
+      firstScreen(function (map) {
+        tryFile(map[normName(appName[id])], done, stepOwn);
       });
     }
     if (!APP_ID_RE.test(String(id || ''))) { notFound(); return; }
     if (appsCache) { go(); } else { listApps(function () { go(); }); }
+  }
+
+  // Hash zastępczych ikon liczymy raz, żeby rozpoznać wiatraczek także pod inną ścieżką.
+  function learnGeneric() {
+    Object.keys(genericPaths).forEach(function (p) {
+      fs.readFile(p, function (err, data) { if (!err) { genericHash[md5(data)] = true; } });
+    });
   }
 
   var server = http.createServer(function (req, res) {
@@ -665,6 +806,8 @@
         tizen: !!T(),
         remote: remote.state,
         remotePort: remote.port,
+        remoteHost: remote.host || null,
+        remoteLog: remote.log || [],
         hasToken: !!remote.token
       };
       if (originOk(req)) { st.secret = SECRET; }
@@ -713,7 +856,7 @@
     if (p === '/key') {
       if (!KEY_RE.test(String(q.k || ''))) { reply(req, res, 400, { ok: false, error: 'Niedozwolony klawisz' }); return; }
       remote.key(q.k, function (err) {
-        reply(req, res, 200, { ok: !err, error: emsg(err), token: remote.token || null, port: remote.port });
+        reply(req, res, 200, { ok: !err, error: emsg(err), token: remote.token || null, port: remote.port, log: remote.log || [] });
       });
       return;
     }
@@ -732,7 +875,10 @@
   var timers = [];
 
   function startTimers() {
-    listApps(function () { pollRunning(); });
+    listApps(function () {
+      learnGeneric();
+      pollRunning();
+    });
     timers.push(setInterval(pollRunning, 15000));
     timers.push(setInterval(function () { appsAt = 0; }, 10 * 60 * 1000));
   }

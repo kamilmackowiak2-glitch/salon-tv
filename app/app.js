@@ -9,7 +9,7 @@
   'use strict';
 
   var CFG = window.SALON_CONFIG || {};
-  var VERSION = '1.2.0';
+  var VERSION = '1.3.0';
   var SERVICE = 'http://127.0.0.1:' + (CFG.servicePort || 8097);
   var PREVIEW = location.protocol === 'file:' || /[?&]preview\b/.test(location.search) ||
     !(location.hostname === '127.0.0.1' || location.hostname === 'localhost');
@@ -321,7 +321,7 @@
     return getJSON(SERVICE + path + (q.length ? '?' + q.join('&') : ''), ms);
   }
 
-  function iconUrl(id) { return SERVICE + '/icon?id=' + encodeURIComponent(id); }
+  function iconUrl(id) { return SERVICE + '/icon?id=' + encodeURIComponent(id) + '&v=3'; }
 
   /* ---------- Aplikacje, ulubione, historia ---------- */
 
@@ -569,7 +569,11 @@
 
     if (it.type === 'app') {
       paintFace(face, glow, rgb);
-      addIcon(face, glow, it);
+      if (kind === 'all') {
+        t.loadIcon = function () { addIcon(face, glow, it); };
+      } else {
+        addIcon(face, glow, it);
+      }
     } else if (it.type === 'hdmi') {
       paintFace(face, glow, rgb);
       face.appendChild(glyph('pad'));
@@ -700,11 +704,17 @@
   var lastNav = 0;
   var ambTimer = null;
 
+  var classRow = -1;
+  var heroTimer = null;
+
   function focus(animate) {
     var r = R[F.r];
-    each(R, function (row, i) {
-      row.el.className = 'row row-' + row.data.kind + (i === F.r ? ' active' : '') + (i < F.r ? ' past' : '');
-    });
+    if (classRow !== F.r || animate === false) {
+      classRow = F.r;
+      each(R, function (row, i) {
+        row.el.className = 'row row-' + row.data.kind + (i === F.r ? ' active' : '') + (i < F.r ? ' past' : '');
+      });
+    }
     if (S.focusTile) { S.focusTile.classList.remove('focused'); }
     if (!r || !r.tiles.length) { return; }
     var t = r.tiles[r.idx];
@@ -716,9 +726,9 @@
     var it = r.data.items[r.idx];
     S.focusItem = it;
     parallax((PAD + (r.idx - r.off) * r.step + KIND[r.data.kind].w / 2) / STAGE_W, F.r);
-    updateHero(it, animate !== false && now() - lastNav > 140);
+    updateHero(it);
     clearTimeout(ambTimer);
-    ambTimer = setTimeout(function () { setAmbient(itemAccent(it)); }, 90);
+    ambTimer = setTimeout(function () { setAmbient(itemAccent(it)); }, 260);
   }
 
   function focusedItem() {
@@ -836,18 +846,17 @@
     box.appendChild(face);
   }
 
-  function updateHero(it, animate) {
+  // Tekst zmienia się od razu, duża ikona dopiero gdy przestaniesz przewijać (mniej pracy dla telewizora).
+  function updateHero(it) {
     DOM.heroTitle.className = 'hero-title' + (it.type === 'video' ? ' long' : '');
     DOM.heroTitle.textContent = it.title || '';
     DOM.heroSub.textContent = heroSub(it);
     DOM.heroHint.textContent = heroHint(it);
     DOM.heroHint.className = 'hero-hint' + (S.moving ? ' moving' : '');
-    heroVisual(it);
-    if (animate) {
-      DOM.heroText.className = 'hero-text';
-      void DOM.heroText.offsetWidth;
-      DOM.heroText.className = 'hero-text swap';
-    }
+    clearTimeout(heroTimer);
+    heroTimer = setTimeout(function () {
+      if (S.focusItem === it) { heroVisual(it); }
+    }, 160);
   }
 
   /* ---------- Światło w tle ---------- */
@@ -861,8 +870,8 @@
     var next = amb.on === 'A' ? DOM.ambB : DOM.ambA;
     var cur = amb.on === 'A' ? DOM.ambA : DOM.ambB;
     next.style.background =
-      'radial-gradient(1150px 760px at 80% 10%, rgba(' + key + ',0.40), rgba(' + key + ',0) 70%), ' +
-      'radial-gradient(900px 620px at 6% 104%, rgba(' + key + ',0.20), rgba(' + key + ',0) 72%)';
+      'radial-gradient(288px 190px at 80% 10%, rgba(' + key + ',0.42), rgba(' + key + ',0) 70%), ' +
+      'radial-gradient(225px 155px at 6% 104%, rgba(' + key + ',0.20), rgba(' + key + ',0) 72%)';
     next.className = 'amb on';
     cur.className = 'amb';
     amb.on = amb.on === 'A' ? 'B' : 'A';
@@ -902,7 +911,9 @@
     if (/odmówił/i.test(err || '')) {
       return 'Zezwól na dostęp w Ustawienia > Ogólne > Menedżer urządzeń zewnętrznych > Menedżer połączeń urządzeń.';
     }
-    if (/zatwierdzono/i.test(err || '')) { return 'Telewizor czekał na zgodę. Spróbuj jeszcze raz i wybierz Zezwól.'; }
+    if (/zatwierdzono/i.test(err || '')) {
+      return 'Telewizor nie pokazał pytania o zgodę. Sprawdź Ustawienia > Ogólne > Menedżer urządzeń zewnętrznych > Menedżer połączeń urządzeń.';
+    }
     return err ? 'Szczegóły: ' + err : '';
   }
 
@@ -914,9 +925,9 @@
     }
     if (S.mode !== 'online') { toast(OFFLINE_MSG, 5000); return; }
     if (!S.hasToken && S.remote !== 'ready') {
-      toast('Telewizor zapyta o zgodę dla „Salon”. Wybierz Zezwól.', 9000);
+      toast('Łączę się z telewizorem. Jeśli zapyta o zgodę dla „Salon”, wybierz Zezwól.', 12000);
     }
-    call('/key', { k: keyName }, 50000).then(function (r) {
+    call('/key', { k: keyName }, 115000).then(function (r) {
       if (r.token) {
         store.set('wstoken', r.token);
         S.hasToken = true;
@@ -1078,6 +1089,14 @@
     var row = Math.floor(AO.idx / AO.cols);
     if (row < AO.top) { AO.top = row; }
     else if (row > AO.top + 2) { AO.top = row - 2; }
+    var from = Math.max(0, (AO.top - 1) * AO.cols);
+    var to = Math.min(AO.tiles.length, (AO.top + 5) * AO.cols);
+    for (var i = from; i < to; i++) {
+      if (AO.tiles[i].loadIcon) {
+        AO.tiles[i].loadIcon();
+        AO.tiles[i].loadIcon = null;
+      }
+    }
     var y = -AO.top * AO.rowH;
     DOM.allGrid.style.webkitTransform = 'translate3d(0,' + y + 'px,0)';
     DOM.allGrid.style.transform = 'translate3d(0,' + y + 'px,0)';
@@ -1324,7 +1343,7 @@
   /* ---------- Tło ---------- */
 
   var sceneDay = -1;
-  var PARA = [[24, 6], [40, 12], [60, 18], [84, 24]];
+  var PARA = [[40, 6], [70, 12], [100, 18], [130, 24]];
 
   function buildWaves(sc) {
     sc.innerHTML = '';

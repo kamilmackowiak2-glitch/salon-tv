@@ -64,12 +64,12 @@ TizenBrew pobiera moduły z publicznych repozytoriów GitHuba.
 3. Kliknij **uploading an existing file**.
 4. Przeciągnij **zawartość** folderu `salon-tv` (plik `package.json`, foldery `app` i `service` oraz `README.md`), a nie sam folder. Plik `package.json` musi leżeć na samej górze repozytorium.
 5. Kliknij **Commit changes**.
-6. Po prawej stronie kliknij **Create a new release**. W polu **Choose a tag** wpisz `v1.2.0`, wybierz **Create new tag**, a potem kliknij **Publish release**.
+6. Po prawej stronie kliknij **Create a new release**. W polu **Choose a tag** wpisz `v1.3.0`, wybierz **Create new tag**, a potem kliknij **Publish release**.
 
 ## 4. Telewizor
 
 1. **Host PC IP na 127.0.0.1.** Wejdź w **Aplikacje**, wpisz na pilocie `12345`. Tryb dewelopera zostaw włączony, a w polu **Host PC IP** wpisz `127.0.0.1`. Kliknij OK i uruchom telewizor ponownie: przytrzymaj przycisk zasilania na pilocie, aż telewizor się wyłączy i włączy. TizenBrew potrzebuje tego adresu, żeby działać samodzielnie i startować moduły automatycznie.
-2. **Dodanie modułu.** Otwórz TizenBrew, wejdź w **Module Manager** (ikona pudełka) i wybierz **Add GitHub Module**. Wpisz `TWÓJ_LOGIN/salon-tv@v1.2.0`, na przykład `kamil123/salon-tv@v1.2.0`. Zatwierdź, a potem zejdź strzałką z pola: TizenBrew dodaje moduł, gdy pole przestaje być zaznaczone.
+2. **Dodanie modułu.** Otwórz TizenBrew, wejdź w **Module Manager** (ikona pudełka) i wybierz **Add GitHub Module**. Wpisz `TWÓJ_LOGIN/salon-tv@v1.3.0`, na przykład `kamil123/salon-tv@v1.3.0`. Zatwierdź, a potem zejdź strzałką z pola: TizenBrew dodaje moduł, gdy pole przestaje być zaznaczone.
 3. **Pierwsze uruchomienie.** Na liście modułów pojawi się **Salon**. Otwórz go.
 4. **Zgoda na pilota sieciowego.** Gdy pierwszy raz klikniesz PlayStation, Źródła albo Ustawienia, telewizor zapyta, czy zezwolić urządzeniu „Salon”. Wybierz **Zezwól**. Pytanie pojawia się tylko raz.
 
@@ -100,18 +100,19 @@ Na kafelku z filmem OK otwiera ten film w aplikacji YouTube. Niektóre wersje op
 TizenBrew pobiera pliki przez jsDelivr, który zapamiętuje każde wydanie na stałe. Każda zmiana potrzebuje więc nowego wydania.
 
 1. Na GitHubie otwórz plik, kliknij ikonę ołówka, zmień i kliknij **Commit changes** (albo wrzuć nowe pliki przez **Add file > Upload files**).
-2. Utwórz nowe wydanie z kolejnym numerem, na przykład `v1.2.1`.
-3. W TizenBrew usuń stary moduł i dodaj `TWÓJ_LOGIN/salon-tv@v1.2.1`.
+2. Utwórz nowe wydanie z kolejnym numerem, na przykład `v1.3.1`.
+3. W TizenBrew usuń stary moduł i dodaj `TWÓJ_LOGIN/salon-tv@v1.3.1`.
 
 Nowa wersja usługi sama przejmuje miejsce starej. Jeśli coś zachowuje się dziwnie, uruchom telewizor ponownie.
 
 ## 8. Gdy coś nie działa
 
 - **Napis „Brak połączenia z usługą Salonu”.** Uruchom telewizor ponownie, przytrzymując przycisk zasilania. Sprawdź, czy Host PC IP to `127.0.0.1`.
-- **PlayStation nie przełącza HDMI.** Sprawdź port: przytrzymaj OK na kafelku konsoli i wybierz właściwe wejście. Jeśli przy pytaniu o zgodę wybrałeś Odmów, wejdź w **Ustawienia > Ogólne > Menedżer urządzeń zewnętrznych > Menedżer połączeń urządzeń > Lista urządzeń** i zezwól urządzeniu „Salon”.
+- **PlayStation, Źródła albo Ustawienia nie działają.** Salon łączy się z pilotem sieciowym telewizora przez jego adres w sieci domowej. Wejdź w **Ustawienia > Ogólne > Menedżer urządzeń zewnętrznych > Menedżer połączeń urządzeń**. Ustaw **Powiadomienie o dostępie** na „Tylko za pierwszym razem”, a w **Liście urządzeń** zezwól urządzeniu „Salon”, jeśli tam jest. Potem kliknij PlayStation jeszcze raz. Port konsoli zmienisz, przytrzymując OK na jej kafelku.
 - **Konsola sama przełącza telewizor.** To funkcja Anynet+ (HDMI-CEC). Gdy jest włączona w telewizorze i w ustawieniach PlayStation, włączenie pada przełącza telewizor na konsolę bez Salonu.
 - **Brak pogody.** Sprawdź nazwę miasta w `config.js`.
-- **Zamiast ikony jest litera.** Salon bierze prawdziwe ikony z telewizora: najpierw z informacji o aplikacji, a potem z jej folderu z zasobami. Litera oznacza, że telewizor nie udostępnił ikony tej aplikacji. Wszystko inne działa normalnie.
+- **Przycina się.** Ustaw `animateBackground: false` w config.js. Fale staną, a reszta zostanie bez zmian.
+- **Zamiast ikony jest litera.** Salon bierze prawdziwe ikony z telewizora: najpierw te z paska Smart Hub, potem z informacji o aplikacji, a na końcu z jej folderu z zasobami. Zastępczą ikonę Tizena (wiatraczek) pomija. Litera oznacza, że telewizor nie udostępnił ikony tej aplikacji. Wszystko inne działa normalnie.
 
 ## 9. Jak to działa
 
