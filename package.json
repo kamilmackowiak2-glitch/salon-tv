@@ -1,0 +1,17 @@
+{
+  "name": "salon-tv",
+  "version": "1.2.0",
+  "description": "Salon: nowoczesny ekran startowy dla telewizorów Samsung (moduł TizenBrew)",
+  "packageType": "app",
+  "appName": "Salon",
+  "appPath": "app/index.html",
+  "serviceFile": "service/service.js",
+  "keys": [
+    "ColorF0Red",
+    "ColorF1Green",
+    "ColorF2Yellow",
+    "ColorF3Blue"
+  ],
+  "private": true,
+  "license": "MIT"
+}

@@ -1,0 +1,1001 @@
+/*
+ * Salon: wygląd.
+ * Pisane pod przeglądarkę telewizora Samsung 2019 (Tizen 5, Chromium ~63):
+ * bez flex gap, inset, clamp(), aspect-ratio i backdrop-filter.
+ *
+ * Paleta
+ *   Zmierzch  #171C45  tło u góry
+ *   Głębia    #090B20  tło u dołu
+ *   Kreda     #F4F3FF  tekst główny
+ *   Mgła      #B3B7DA  tekst drugorzędny
+ *   Cień      #737AA6  podpowiedzi
+ *   Bursztyn  #FFC46B  stany i przesuwanie
+ * Światło w tle przyjmuje kolor aplikacji, na której stoisz.
+ */
+
+html, body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #090B20;
+}
+
+body {
+  color: #F4F3FF;
+  font-family: "Onest", "SamsungOneUI", "Samsung Sans", "Tizen Sans", "Roboto", "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  cursor: none;
+}
+
+h1, h2, p { margin: 0; font-weight: inherit; }
+
+#stage {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1920px;
+  height: 1080px;
+  overflow: hidden;
+  -webkit-transform-origin: 0 0;
+  transform-origin: 0 0;
+  background: linear-gradient(180deg, #171C45 0%, #0E1132 52%, #090B20 100%);
+}
+
+/* ---------- Tło: grafika, światło, ziarno ---------- */
+
+#scene, #depth {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1920px;
+  height: 1080px;
+  pointer-events: none;
+}
+
+#scene.fale {
+  background: radial-gradient(circle 820px at 160px 525px, rgba(122, 108, 255, .30) 0%, rgba(91, 79, 224, .10) 45%, rgba(91, 79, 224, 0) 100%);
+}
+
+#scene .sky {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1920px;
+  height: 480px;
+  background: url(niebo.png) no-repeat 0 0;
+}
+
+/* Fale: każda warstwa kołysze się w swoim tempie (.wv) i przesuwa za kafelkiem (.wave). */
+.wave {
+  position: absolute;
+  left: -160px;
+  width: 2240px;
+  will-change: transform;
+  -webkit-transition: -webkit-transform 1.4s cubic-bezier(.2, .8, .2, 1);
+  transition: transform 1.4s cubic-bezier(.2, .8, .2, 1);
+}
+
+.wave .wv {
+  width: 2240px;
+  height: 100%;
+  background-repeat: no-repeat;
+  background-position: 0 0;
+  will-change: transform;
+}
+
+.w1 { top: 470px; height: 710px; }
+.w2 { top: 640px; height: 540px; }
+.w3 { top: 740px; height: 440px; }
+.w4 { top: 880px; height: 300px; }
+
+.w1 .wv {
+  background-image: url(fala1.png);
+  -webkit-animation: sway 44s ease-in-out -12s infinite alternate;
+  animation: sway 44s ease-in-out -12s infinite alternate;
+}
+
+.w2 .wv {
+  background-image: url(fala2.png);
+  -webkit-animation: sway 36s ease-in-out -27s infinite alternate;
+  animation: sway 36s ease-in-out -27s infinite alternate;
+}
+
+.w3 .wv {
+  background-image: url(fala3.png);
+  -webkit-animation: sway 29s ease-in-out -8s infinite alternate;
+  animation: sway 29s ease-in-out -8s infinite alternate;
+}
+
+.w4 .wv {
+  background-image: url(fala4.png);
+  -webkit-animation: sway 23s ease-in-out -17s infinite alternate;
+  animation: sway 23s ease-in-out -17s infinite alternate;
+}
+
+#scene.still .wv {
+  -webkit-animation: none;
+  animation: none;
+}
+
+#scene.still .wave {
+  -webkit-transition: none;
+  transition: none;
+}
+
+@-webkit-keyframes sway {
+  from { -webkit-transform: translate3d(-36px, 3px, 0); }
+  to { -webkit-transform: translate3d(36px, -3px, 0); }
+}
+
+@keyframes sway {
+  from { transform: translate3d(-36px, 3px, 0); }
+  to { transform: translate3d(36px, -3px, 0); }
+}
+
+#scene.wall {
+  background-repeat: no-repeat;
+  background-position: center center;
+  background-size: cover;
+}
+
+#scene.wall:after {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background:
+    linear-gradient(90deg, rgba(9, 11, 32, .92) 0%, rgba(9, 11, 32, .72) 36%, rgba(9, 11, 32, .28) 70%, rgba(9, 11, 32, .55) 100%),
+    linear-gradient(0deg, rgba(9, 11, 32, .97) 0%, rgba(9, 11, 32, .66) 40%, rgba(9, 11, 32, 0) 68%);
+}
+
+#depth {
+  background:
+    url(ziarno.png) repeat 0 0,
+    radial-gradient(ellipse 1400px 900px at 52% 40%, rgba(4, 5, 16, 0) 58%, rgba(4, 5, 16, .55) 100%);
+}
+
+#ambient, .amb {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1920px;
+  height: 1080px;
+}
+
+.amb {
+  opacity: 0;
+  -webkit-transition: opacity .8s ease;
+  transition: opacity .8s ease;
+}
+
+.amb.on { opacity: 1; }
+
+/* ---------- Pasek u góry ---------- */
+
+#topbar, #hero {
+  -webkit-transition: opacity .6s ease;
+  transition: opacity .6s ease;
+}
+
+#topbar {
+  position: absolute;
+  left: 112px;
+  right: 112px;
+  top: 58px;
+  height: 140px;
+}
+
+.tb-left { position: absolute; left: 0; top: 0; }
+.tb-right { position: absolute; right: 0; top: 0; text-align: right; }
+
+.greet {
+  font-size: 40px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.date {
+  margin-top: 8px;
+  font-size: 28px;
+  color: #B3B7DA;
+}
+
+.status {
+  margin-top: 14px;
+  font-size: 24px;
+  color: #FFC46B;
+  display: none;
+}
+
+.status.show { display: block; }
+
+.clock {
+  font-family: "Unbounded", "SamsungOneUI", "Roboto", Arial, sans-serif;
+  font-weight: 300;
+  font-size: 80px;
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+
+.weather {
+  margin-top: 14px;
+  font-size: 28px;
+  color: #B3B7DA;
+  display: -webkit-box;
+  display: -webkit-flex;
+  display: flex;
+  -webkit-box-pack: end;
+  -webkit-justify-content: flex-end;
+  justify-content: flex-end;
+  -webkit-box-align: center;
+  -webkit-align-items: center;
+  align-items: center;
+}
+
+.weather svg {
+  width: 38px;
+  height: 38px;
+  margin-right: 12px;
+  color: #F4F3FF;
+}
+
+.weather .w-temp {
+  color: #F4F3FF;
+  font-weight: 600;
+  margin-right: 14px;
+}
+
+/* ---------- Duży opis tego, na czym stoisz ---------- */
+
+#hero {
+  position: absolute;
+  left: 112px;
+  right: 112px;
+  top: 236px;
+  height: 330px;
+}
+
+.hero-text {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1060px;
+}
+
+.hero-text.swap {
+  -webkit-animation: heroIn .22s ease-out;
+  animation: heroIn .22s ease-out;
+}
+
+@-webkit-keyframes heroIn {
+  from { opacity: .35; -webkit-transform: translate3d(0, 10px, 0); }
+  to { opacity: 1; -webkit-transform: translate3d(0, 0, 0); }
+}
+
+@keyframes heroIn {
+  from { opacity: .35; transform: translate3d(0, 10px, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+.hero-title {
+  font-family: "Unbounded", "SamsungOneUI", "Roboto", Arial, sans-serif;
+  font-weight: 700;
+  font-size: 104px;
+  line-height: 1.06;
+  letter-spacing: -0.035em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hero-title.long {
+  font-family: "Onest", "SamsungOneUI", "Roboto", Arial, sans-serif;
+  font-size: 60px;
+  line-height: 1.14;
+  letter-spacing: -0.01em;
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.hero-sub {
+  margin-top: 22px;
+  font-size: 34px;
+  line-height: 1.3;
+  color: #DCDDF3;
+  max-width: 1000px;
+}
+
+.hero-hint {
+  margin-top: 14px;
+  font-size: 26px;
+  line-height: 1.35;
+  color: #8E94C0;
+  max-width: 1000px;
+}
+
+.hero-hint.moving { color: #FFC46B; }
+
+.hero-visual {
+  position: absolute;
+  right: 0;
+  top: -14px;
+  width: 640px;
+  height: 360px;
+}
+
+.hv-halo {
+  position: absolute;
+  left: 140px;
+  top: -140px;
+  width: 640px;
+  height: 640px;
+}
+
+.hv-face {
+  position: absolute;
+  right: 40px;
+  top: 30px;
+  width: 300px;
+  height: 300px;
+  border-radius: 80px;
+  overflow: hidden;
+  background: #1B1F46;
+}
+
+.hv-face img {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 176px;
+  height: 176px;
+  margin: -88px 0 0 -88px;
+  border-radius: 40px;
+}
+
+.hv-face .mono { font-size: 112px; }
+
+.hv-face svg {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 150px;
+  height: 150px;
+  margin: -75px 0 0 -75px;
+  color: #F4F3FF;
+}
+
+.hv-thumb {
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 640px;
+  height: 360px;
+  border-radius: 28px;
+  overflow: hidden;
+  background: #1B1F46;
+}
+
+.hv-thumb img {
+  width: 640px;
+  height: 360px;
+  object-fit: cover;
+  display: block;
+}
+
+/* ---------- Rzędy kafelków ---------- */
+
+#rows {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 604px;
+  bottom: 0;
+  overflow: hidden;
+  opacity: 0;
+  -webkit-transition: opacity .6s ease;
+  transition: opacity .6s ease;
+  -webkit-mask-image: linear-gradient(to bottom, #000 0, #000 80%, transparent 100%);
+}
+
+.ready #rows { opacity: 1; }
+
+#rowsInner {
+  -webkit-transition: -webkit-transform .42s cubic-bezier(.2, .8, .2, 1);
+  transition: transform .42s cubic-bezier(.2, .8, .2, 1);
+  will-change: transform;
+}
+
+.row {
+  padding: 26px 112px 0;
+  margin-bottom: 22px;
+  -webkit-transition: opacity .3s ease;
+  transition: opacity .3s ease;
+}
+
+.row.past { opacity: 0; }
+
+.ready .row {
+  -webkit-animation: rowIn .6s cubic-bezier(.2, .8, .2, 1) both;
+  animation: rowIn .6s cubic-bezier(.2, .8, .2, 1) both;
+}
+
+.ready .row:nth-child(2) { -webkit-animation-delay: .07s; animation-delay: .07s; }
+.ready .row:nth-child(3) { -webkit-animation-delay: .14s; animation-delay: .14s; }
+.ready .row:nth-child(4) { -webkit-animation-delay: .21s; animation-delay: .21s; }
+
+.settled .row {
+  -webkit-animation: none;
+  animation: none;
+}
+
+@-webkit-keyframes rowIn {
+  from { opacity: 0; -webkit-transform: translate3d(0, 40px, 0); }
+  to { opacity: 1; -webkit-transform: translate3d(0, 0, 0); }
+}
+
+@keyframes rowIn {
+  from { opacity: 0; transform: translate3d(0, 40px, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+.row-label {
+  font-size: 30px;
+  font-weight: 600;
+  color: #8E94C0;
+  margin: 0 0 24px 2px;
+  -webkit-transition: color .2s ease;
+  transition: color .2s ease;
+}
+
+.row.active .row-label { color: #F4F3FF; }
+
+.track {
+  white-space: nowrap;
+  -webkit-transition: -webkit-transform .36s cubic-bezier(.2, .8, .2, 1);
+  transition: transform .36s cubic-bezier(.2, .8, .2, 1);
+  will-change: transform;
+}
+
+.track.instant {
+  -webkit-transition: none;
+  transition: none;
+}
+
+/* ---------- Kafelek ---------- */
+
+.tile {
+  display: inline-block;
+  vertical-align: top;
+  position: relative;
+  z-index: 0;
+  white-space: normal;
+  -webkit-transition: -webkit-transform .18s cubic-bezier(.2, .8, .2, 1);
+  transition: transform .18s cubic-bezier(.2, .8, .2, 1);
+}
+
+.tile.focused {
+  z-index: 2;
+  -webkit-transform: scale(1.08);
+  transform: scale(1.08);
+}
+
+.face {
+  position: relative;
+  overflow: hidden;
+  background: #1B1F46;
+}
+
+.ring {
+  position: absolute;
+  left: -7px;
+  top: -7px;
+  box-sizing: border-box;
+  border: 4px solid #F4F3FF;
+  opacity: 0;
+  pointer-events: none;
+  -webkit-transition: opacity .15s ease;
+  transition: opacity .15s ease;
+}
+
+.glow {
+  position: absolute;
+  left: -48px;
+  top: -48px;
+  z-index: -1;
+  opacity: 0;
+  pointer-events: none;
+  -webkit-transition: opacity .25s ease;
+  transition: opacity .25s ease;
+}
+
+.tile.focused .ring,
+.tile.focused .glow { opacity: 1; }
+
+.tile.moving .ring {
+  border-color: #FFC46B;
+  border-style: dashed;
+}
+
+.icon {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+}
+
+.mono {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  display: -webkit-box;
+  display: -webkit-flex;
+  display: flex;
+  -webkit-box-align: center;
+  -webkit-align-items: center;
+  align-items: center;
+  -webkit-box-pack: center;
+  -webkit-justify-content: center;
+  justify-content: center;
+  font-family: "Unbounded", "SamsungOneUI", "Roboto", Arial, sans-serif;
+  font-weight: 700;
+  font-size: 60px;
+  letter-spacing: -0.04em;
+  color: rgba(255, 255, 255, .94);
+}
+
+.glyph {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  color: #F4F3FF;
+}
+
+.glyph svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* Ulubione: 304 x 171 */
+.tile-fav { margin-right: 32px; }
+.tile-fav .face { width: 304px; height: 171px; border-radius: 30px; }
+.tile-fav .ring { width: 318px; height: 185px; border-radius: 37px; }
+.tile-fav .glow { width: 400px; height: 267px; }
+.tile-fav .icon { width: 108px; height: 108px; margin: -54px 0 0 -54px; border-radius: 26px; }
+.tile-fav .glyph { width: 76px; height: 76px; margin: -38px 0 0 -38px; }
+
+.port {
+  position: absolute;
+  right: 18px;
+  bottom: 14px;
+  font-size: 22px;
+  font-weight: 600;
+  color: rgba(244, 243, 255, .82);
+}
+
+.face.add {
+  background: rgba(244, 243, 255, .06);
+}
+
+.face.add .glyph { color: #B3B7DA; }
+
+/* Ostatnio używane: 232 x 131 */
+.tile-recent { margin-right: 28px; }
+.tile-recent .face { width: 232px; height: 131px; border-radius: 24px; }
+.tile-recent .ring { width: 246px; height: 145px; border-radius: 31px; }
+.tile-recent .glow { width: 328px; height: 227px; }
+.tile-recent .icon { width: 80px; height: 80px; margin: -40px 0 0 -40px; border-radius: 20px; }
+.tile-recent .mono { font-size: 46px; }
+.tile-recent .glyph { width: 58px; height: 58px; margin: -29px 0 0 -29px; }
+
+.cap {
+  margin-top: 16px;
+  width: 232px;
+  font-size: 23px;
+  color: #8E94C0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Filmy: 384 x 216 */
+.tile-video { margin-right: 32px; }
+.tile-video .face { width: 384px; height: 216px; border-radius: 18px; }
+.tile-video .ring { width: 398px; height: 230px; border-radius: 25px; }
+.tile-video .glow { width: 480px; height: 312px; }
+
+.thumb {
+  display: block;
+  width: 384px;
+  height: 216px;
+  object-fit: cover;
+}
+
+.thumb-demo {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.badge {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  padding: 3px 10px;
+  border-radius: 8px;
+  background: rgba(9, 11, 32, .84);
+  font-size: 21px;
+  font-weight: 600;
+}
+
+.badge.live { background: #E0464E; }
+
+.vt {
+  margin-top: 16px;
+  width: 384px;
+  height: 64px;
+  font-size: 25px;
+  font-weight: 600;
+  line-height: 1.28;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.vc {
+  margin-top: 6px;
+  width: 384px;
+  font-size: 22px;
+  color: #8E94C0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.info-face {
+  position: absolute;
+  left: 32px;
+  right: 32px;
+  bottom: 26px;
+  font-size: 26px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.tile-video .face.info { background: linear-gradient(140deg, rgba(224, 70, 78, .5) 0%, rgba(224, 70, 78, .12) 100%), #1B1F46; }
+.tile-video .face.info .glyph { width: 64px; height: 64px; left: 32px; top: 30px; margin: 0; }
+
+/* Skróty: pastylki 300 x 108 */
+.tile-action { margin-right: 24px; }
+.tile-action .face {
+  width: 300px;
+  height: 108px;
+  border-radius: 54px;
+  background: rgba(244, 243, 255, .07);
+}
+.tile-action .ring { width: 314px; height: 122px; border-radius: 61px; }
+.tile-action .glow { width: 396px; height: 204px; }
+.tile-action .glyph { width: 40px; height: 40px; left: 34px; top: 34px; margin: 0; color: #B3B7DA; }
+.tile-action.focused .glyph { color: #F4F3FF; }
+
+.act-label {
+  position: absolute;
+  left: 92px;
+  top: 0;
+  line-height: 108px;
+  font-size: 27px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* ---------- Nakładki ---------- */
+
+.overlay {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1920px;
+  height: 1080px;
+  visibility: hidden;
+  opacity: 0;
+  -webkit-transition: opacity .2s ease, visibility 0s linear .2s;
+  transition: opacity .2s ease, visibility 0s linear .2s;
+}
+
+.overlay.open {
+  visibility: visible;
+  opacity: 1;
+  -webkit-transition: opacity .2s ease;
+  transition: opacity .2s ease;
+}
+
+#allApps { background: linear-gradient(180deg, #13173A 0%, #0B0D25 60%, #090B20 100%); }
+
+.ov-head {
+  position: absolute;
+  left: 112px;
+  top: 84px;
+}
+
+.ov-title {
+  font-family: "Unbounded", "SamsungOneUI", "Roboto", Arial, sans-serif;
+  font-weight: 500;
+  font-size: 56px;
+  letter-spacing: -0.03em;
+}
+
+.ov-hint {
+  margin-top: 14px;
+  font-size: 27px;
+  color: #8E94C0;
+}
+
+.ov-clip {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 250px;
+  bottom: 0;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(to bottom, #000 0, #000 86%, transparent 100%);
+}
+
+.grid {
+  padding: 24px 112px 0;
+  -webkit-transition: -webkit-transform .32s cubic-bezier(.2, .8, .2, 1);
+  transition: transform .32s cubic-bezier(.2, .8, .2, 1);
+}
+
+.tile-all {
+  margin: 0 36px 40px 0;
+}
+
+.tile-all:nth-child(6n) { margin-right: 0; }
+.tile-all .face { width: 240px; height: 135px; border-radius: 24px; }
+.tile-all .ring { width: 254px; height: 149px; border-radius: 31px; }
+.tile-all .glow { width: 336px; height: 231px; }
+.tile-all .icon { width: 84px; height: 84px; margin: -42px 0 0 -42px; border-radius: 20px; }
+.tile-all .mono { font-size: 46px; }
+
+.tile-all .cap {
+  width: 240px;
+  color: #B3B7DA;
+}
+
+.tile-all.focused .cap { color: #F4F3FF; }
+
+.empty {
+  font-size: 30px;
+  color: #B3B7DA;
+  line-height: 1.4;
+  max-width: 1100px;
+}
+
+#menu { background: rgba(9, 11, 32, .72); }
+
+.menu-panel {
+  position: absolute;
+  left: 600px;
+  top: 220px;
+  width: 720px;
+  padding: 44px 40px 32px;
+  box-sizing: border-box;
+  border-radius: 36px;
+  background: #1D2252;
+}
+
+.menu-title {
+  font-family: "Unbounded", "SamsungOneUI", "Roboto", Arial, sans-serif;
+  font-weight: 500;
+  font-size: 40px;
+  letter-spacing: -0.02em;
+  margin: 0 8px 26px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.opt {
+  height: 84px;
+  line-height: 84px;
+  padding: 0 28px;
+  margin-bottom: 8px;
+  border-radius: 22px;
+  font-size: 31px;
+  font-weight: 500;
+  color: #DCDDF3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.opt.focused {
+  background: #F4F3FF;
+  color: #141838;
+}
+
+.toast {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 70px;
+  margin: 0 auto;
+  width: 1100px;
+  text-align: center;
+  opacity: 0;
+  -webkit-transform: translate3d(0, 24px, 0);
+  transform: translate3d(0, 24px, 0);
+  -webkit-transition: opacity .25s ease, -webkit-transform .25s ease;
+  transition: opacity .25s ease, transform .25s ease;
+  pointer-events: none;
+}
+
+.toast span {
+  display: inline-block;
+  padding: 20px 40px;
+  border-radius: 40px;
+  background: #F4F3FF;
+  color: #141838;
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.toast.show {
+  opacity: 1;
+  -webkit-transform: translate3d(0, 0, 0);
+  transform: translate3d(0, 0, 0);
+}
+
+/* ---------- Wygaszacz „Wieczór w salonie” ---------- */
+
+body.saver #topbar,
+body.saver #hero,
+body.saver #rows,
+body.saver .overlay,
+body.saver .toast { opacity: 0; }
+
+body.saver .amb {
+  -webkit-transition: opacity 5s ease;
+  transition: opacity 5s ease;
+}
+
+#saver {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1920px;
+  height: 1080px;
+  opacity: 0;
+  visibility: hidden;
+  -webkit-transition: opacity .8s ease, visibility 0s linear .8s;
+  transition: opacity .8s ease, visibility 0s linear .8s;
+}
+
+body.saver #saver {
+  opacity: 1;
+  visibility: visible;
+  -webkit-transition: opacity 1.6s ease .4s;
+  transition: opacity 1.6s ease .4s;
+}
+
+.sv-box {
+  position: absolute;
+  left: 160px;
+  top: 240px;
+  -webkit-transition: opacity 1.2s ease;
+  transition: opacity 1.2s ease;
+}
+
+.sv-box.fade { opacity: 0; }
+
+.sv-clock {
+  font-family: "Unbounded", "SamsungOneUI", "Roboto", Arial, sans-serif;
+  font-weight: 300;
+  font-size: 240px;
+  line-height: 1;
+  letter-spacing: -0.05em;
+}
+
+.sv-date {
+  margin-top: 22px;
+  font-size: 44px;
+  font-weight: 500;
+  color: #DCDDF3;
+}
+
+.sv-now {
+  margin-top: 40px;
+  font-size: 36px;
+  color: #B3B7DA;
+  display: -webkit-box;
+  display: -webkit-flex;
+  display: flex;
+  -webkit-box-align: center;
+  -webkit-align-items: center;
+  align-items: center;
+}
+
+.sv-now svg {
+  width: 48px;
+  height: 48px;
+  margin-right: 16px;
+  color: #F4F3FF;
+}
+
+.sv-now .w-temp {
+  color: #F4F3FF;
+  font-weight: 600;
+  margin-right: 16px;
+}
+
+.sv-days {
+  margin-top: 44px;
+  white-space: nowrap;
+}
+
+.sv-day {
+  display: inline-block;
+  vertical-align: top;
+  width: 210px;
+  margin-right: 24px;
+}
+
+.sv-dname {
+  font-size: 28px;
+  color: #8E94C0;
+}
+
+.sv-dicon {
+  margin-top: 12px;
+  width: 52px;
+  height: 52px;
+  color: #F4F3FF;
+}
+
+.sv-dicon svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.sv-dtemp {
+  margin-top: 12px;
+  font-size: 32px;
+}
+
+.sv-dtemp .hi { color: #F4F3FF; font-weight: 600; }
+.sv-dtemp .lo { color: #8E94C0; }
+
+.sv-hint {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 64px;
+  text-align: center;
+  font-size: 26px;
+  color: #8E94C0;
+  opacity: 0;
+  -webkit-transition: opacity 1.2s ease;
+  transition: opacity 1.2s ease;
+}
+
+.sv-hint.show { opacity: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *:before, *:after {
+    -webkit-animation: none !important;
+    animation: none !important;
+    -webkit-transition: none !important;
+    transition: none !important;
+  }
+}

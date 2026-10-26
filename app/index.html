@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=1920, initial-scale=1">
+  <title>Salon</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&family=Unbounded:wght@300;500;700&display=swap">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="stage">
+    <div id="scene"></div>
+    <div id="ambient">
+      <div class="amb" id="ambA"></div>
+      <div class="amb" id="ambB"></div>
+    </div>
+    <div id="depth"></div>
+
+    <header id="topbar">
+      <div class="tb-left">
+        <div id="greet" class="greet"></div>
+        <div id="date" class="date"></div>
+        <div id="status" class="status"></div>
+      </div>
+      <div class="tb-right">
+        <div id="clock" class="clock"></div>
+        <div id="weather" class="weather"></div>
+      </div>
+    </header>
+
+    <section id="hero">
+      <div class="hero-text" id="heroText">
+        <h1 id="heroTitle" class="hero-title"></h1>
+        <p id="heroSub" class="hero-sub"></p>
+        <p id="heroHint" class="hero-hint"></p>
+      </div>
+      <div class="hero-visual" id="heroVisual"></div>
+    </section>
+
+    <main id="rows"><div id="rowsInner"></div></main>
+
+    <div id="allApps" class="overlay">
+      <div class="ov-head">
+        <h2 class="ov-title">Wszystkie aplikacje</h2>
+        <p id="allHint" class="ov-hint"></p>
+      </div>
+      <div class="ov-clip"><div id="allGrid" class="grid"></div></div>
+    </div>
+
+    <div id="menu" class="overlay">
+      <div class="menu-panel">
+        <h2 id="menuTitle" class="menu-title"></h2>
+        <div id="menuList" class="menu-list"></div>
+      </div>
+    </div>
+
+    <div id="saver">
+      <div id="svBox" class="sv-box">
+        <div id="svClock" class="sv-clock"></div>
+        <div id="svDate" class="sv-date"></div>
+        <div id="svNow" class="sv-now"></div>
+        <div id="svDays" class="sv-days"></div>
+      </div>
+      <div id="svHint" class="sv-hint">Naciśnij dowolny przycisk, aby wrócić.</div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+  </div>
+
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
