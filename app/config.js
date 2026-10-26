@@ -8,7 +8,7 @@ window.SALON_CONFIG = {
   name: "Kamil",
 
   // Miasto do pogody, np. "Poznań" albo "Brody". Puste "" wyłącza pogodę.
-  city: "Warszawa",
+  city: "Wrocław",
 
   // Konsola podłączona przez HDMI. hdmi = numer wejścia (1–4).
   // Port zmienisz też na telewizorze: przytrzymaj OK na kafelku konsoli.
@@ -35,7 +35,7 @@ window.SALON_CONFIG = {
 
   // Klucz YouTube Data API v3 (README, sekcja „Filmy z YouTube”).
   // Bez klucza zamiast filmów zobaczysz kafelek z instrukcją.
-  youtubeApiKey: "",
+  youtubeApiKey: "AIzaSyC_KoE_zHNWXdrzvwSkCdSIRcP3O8N6378",
   youtubeRegion: "PL",
 
   // Port usługi w tle. Nie zmieniaj.
